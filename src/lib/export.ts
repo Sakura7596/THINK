@@ -1,0 +1,60 @@
+import type { Note } from '../types/note'
+
+export function formatDateTime(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value)
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const hours = String(date.getUTCHours()).padStart(2, '0')
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+export function createExcerpt(content: string, maxLength = 140): string {
+  const compact = content.replace(/\s+/g, ' ').trim()
+  if (compact.length <= maxLength) return compact
+
+  const truncated = compact.slice(0, maxLength)
+  const wordBoundary = truncated.lastIndexOf(' ')
+  const excerpt = wordBoundary > 0 ? truncated.slice(0, wordBoundary) : truncated
+  return `${excerpt.trimEnd()}...`
+}
+
+export function exportNotesAsMarkdown(notes: Note[], exportedAt = new Date()): string {
+  const sections = notes.map((note) => {
+    const title = note.title.trim() || 'Untitled'
+    const tags = note.tags.length ? note.tags.join(', ') : '-'
+    return [
+      `## ${title}`,
+      '',
+      `Created: ${formatDateTime(note.created_at)}`,
+      `Updated: ${formatDateTime(note.updated_at)}`,
+      `Tags: ${tags}`,
+      '',
+      note.content,
+      '',
+      '---',
+    ].join('\n')
+  })
+
+  return ['# think export', '', `Exported at: ${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
+}
+
+export function downloadTextFile(filename: string, content: string, type: string): void {
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
+export function exportDateStamp(date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
