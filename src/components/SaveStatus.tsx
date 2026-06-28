@@ -2,9 +2,9 @@ export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const labels: Record<SaveState, string> = {
   idle: '',
-  saving: 'saving...',
-  saved: 'saved',
-  error: 'not saved',
+  saving: '保存中...',
+  saved: '已保存',
+  error: '未保存',
 }
 
 export function SaveStatus({ state }: { state: SaveState }) {

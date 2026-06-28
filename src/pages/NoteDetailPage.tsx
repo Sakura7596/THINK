@@ -15,7 +15,7 @@ export function NoteDetailPage() {
     void getNote(id).then(setNote).catch(() => setError(true))
   }, [id])
 
-  if (error) return <EmptyState title="Note not found." />
-  if (!note) return <p className="text-muted">loading...</p>
+  if (error) return <EmptyState title="没有找到这条记录。" />
+  if (!note) return <p className="text-muted">加载中...</p>
   return <NoteEditor note={note} />
 }

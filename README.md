@@ -1,92 +1,113 @@
 # THINK
 
-A quiet place for unfinished thoughts.
+一个存放未完成想法的地方。
 
-think is a small personal note app for quick thoughts, unfinished writing, observations, and longer private notes. V1 intentionally has no login, registration, email verification, or access restriction.
+think 是一个很轻的个人想法记录工具，用来保存临时想法、问题灵感、观察记录和较长的个人文字。V1 不包含登录、注册、邮箱验证或访问限制。
 
-## Stack
+## 技术栈
 
 - React
 - TypeScript
 - Vite
 - Tailwind CSS
-- Cloudflare Pages
-- Cloudflare Pages Functions
+- Cloudflare Workers 静态资源部署
+- Cloudflare Worker API
 - Supabase Postgres
 
-## Local setup
+## 本地运行
 
-Install dependencies:
+安装依赖：
 
 ```bash
 npm install
 ```
 
-Create local environment variables for Pages Functions. Do not commit this file:
-
-```bash
-cp .env.example .dev.vars
-```
-
-Fill in:
-
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-Run the app:
+本地开发：
 
 ```bash
 npm run dev
 ```
 
-For local testing of Pages Functions, use Cloudflare's Pages development workflow if needed. The deployed app reads the same variables from Cloudflare Pages settings.
+运行验证：
 
-## Supabase initialization
-
-Run the SQL in `supabase/schema.sql` in the Supabase SQL editor. It creates:
-
-- `public.notes`
-- `set_updated_at()` trigger function
-- indexes for updated time, pinned status, archived status, and tags
-
-V1 does not use Supabase Auth or user-level RLS.
-
-## Cloudflare Pages
-
-Build settings:
-
-```text
-Build command: npm run build
-Build output directory: dist
-Production branch: main
+```bash
+npm run lint
+npm test
+npm run build
 ```
 
-Environment variables:
+## 环境变量
+
+`.env.example` 中列出需要的变量：
+
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+线上环境需要在 Cloudflare Worker 中配置：
 
 ```text
-SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
-Set `SUPABASE_SERVICE_ROLE_KEY` as a Secret / encrypted value. Do not expose it in frontend code.
+`SUPABASE_URL` 已写入 `wrangler.jsonc` 的 `vars`，因为它不是密钥。`SUPABASE_SERVICE_ROLE_KEY` 必须使用 Secret / 密钥方式配置，不能提交到 GitHub。
 
-Custom domain:
+## Supabase 初始化
+
+在 Supabase SQL Editor 中执行：
 
 ```text
-think.minamir.cn
+supabase/schema.sql
 ```
 
-## Scripts
+它会创建：
+
+- `public.notes`
+- `set_updated_at()` 触发器函数
+- updated time / pinned / archived / tags 索引
+
+V1 不使用 Supabase Auth，也不配置用户级 RLS。
+
+## Cloudflare 部署
+
+当前项目按 Worker 静态资源部署：
 
 ```bash
-npm run dev
-npm run build
-npm run test
-npm run lint
+npx wrangler deploy
 ```
 
-## Data export
+`wrangler.jsonc` 包含：
 
-Use the Settings page to export all non-deleted notes as JSON or Markdown.
+- Worker 名称：`think`
+- 静态资源目录：`dist`
+- SPA fallback
+- 自定义域名：`think.minamir.cn`
+- Worker API 入口：`src/worker.ts`
+
+构建由 Wrangler 执行：
+
+```text
+npm run build
+```
+
+## API
+
+Worker 处理以下接口：
+
+```text
+GET    /api/notes
+POST   /api/notes
+GET    /api/notes/:id
+PATCH  /api/notes/:id
+DELETE /api/notes/:id
+GET    /api/export?format=json
+GET    /api/export?format=markdown
+```
+
+## 数据导出
+
+在设置页可以导出所有未删除记录：
+
+- JSON
+- Markdown

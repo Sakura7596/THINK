@@ -22,14 +22,14 @@ export function createExcerpt(content: string, maxLength = 140): string {
 
 export function exportNotesAsMarkdown(notes: Note[], exportedAt = new Date()): string {
   const sections = notes.map((note) => {
-    const title = note.title.trim() || 'Untitled'
+    const title = note.title.trim() || '未命名'
     const tags = note.tags.length ? note.tags.join(', ') : '-'
     return [
       `## ${title}`,
       '',
-      `Created: ${formatDateTime(note.created_at)}`,
-      `Updated: ${formatDateTime(note.updated_at)}`,
-      `Tags: ${tags}`,
+      `创建时间：${formatDateTime(note.created_at)}`,
+      `更新时间：${formatDateTime(note.updated_at)}`,
+      `标签：${tags}`,
       '',
       note.content,
       '',
@@ -37,7 +37,7 @@ export function exportNotesAsMarkdown(notes: Note[], exportedAt = new Date()): s
     ].join('\n')
   })
 
-  return ['# think export', '', `Exported at: ${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
+  return ['# think 导出', '', `导出时间：${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
 }
 
 export function downloadTextFile(filename: string, content: string, type: string): void {

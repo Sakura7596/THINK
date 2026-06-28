@@ -2,11 +2,11 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Archive, Feather, Home, PenLine, Settings } from 'lucide-react'
 
 const navItems = [
-  { to: '/', label: 'home', icon: Home },
-  { to: '/write', label: 'write', icon: PenLine },
-  { to: '/notes', label: 'notes', icon: Feather },
-  { to: '/archive', label: 'archive', icon: Archive },
-  { to: '/settings', label: 'settings', icon: Settings },
+  { to: '/', label: '首页', icon: Home },
+  { to: '/write', label: '写下', icon: PenLine },
+  { to: '/notes', label: '记录', icon: Feather },
+  { to: '/archive', label: '归档', icon: Archive },
+  { to: '/settings', label: '设置', icon: Settings },
 ]
 
 export function AppShell() {

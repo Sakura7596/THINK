@@ -43,12 +43,12 @@ export function ArchivePage() {
   return (
     <section className="mx-auto max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-semibold text-ink">archive</h1>
-        <p className="mt-2 text-muted">Older thoughts kept out of the way.</p>
+        <h1 className="text-3xl font-semibold text-ink">归档</h1>
+        <p className="mt-2 text-muted">暂时放到一边的记录。</p>
       </div>
       <label className="relative mb-5 block">
         <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
-        <input className="field pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search archive" />
+        <input className="field pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索归档" />
       </label>
       {visible.length ? (
         <div className="rounded-md border border-line bg-surface/70 px-5">
@@ -57,7 +57,7 @@ export function ArchivePage() {
           ))}
         </div>
       ) : (
-        <EmptyState title="Nothing archived." />
+        <EmptyState title="还没有归档记录。" />
       )}
     </section>
   )

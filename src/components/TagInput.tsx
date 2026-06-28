@@ -27,7 +27,7 @@ export function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: 
             type="button"
             className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-sm text-muted transition hover:text-ink"
             onClick={() => onChange(tags.filter((item) => item !== tag))}
-            title={`Remove ${tag}`}
+            title={`移除 ${tag}`}
           >
             {tag}
             <X size={13} aria-hidden="true" />
@@ -42,7 +42,7 @@ export function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: 
         onBlur={() => {
           if (value.trim()) addTag()
         }}
-        placeholder="Add tag"
+        placeholder="添加标签"
       />
     </div>
   )

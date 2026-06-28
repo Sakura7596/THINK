@@ -16,14 +16,14 @@ export function SettingsPage() {
   return (
     <section className="mx-auto max-w-3xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-ink">settings</h1>
-        <p className="mt-2 text-muted">Data is stored in Supabase through Cloudflare Pages Functions.</p>
+        <h1 className="text-3xl font-semibold text-ink">设置</h1>
+        <p className="mt-2 text-muted">数据通过 Cloudflare Worker 写入 Supabase。</p>
       </div>
 
       <div className="space-y-5 rounded-md border border-line bg-surface p-5 shadow-soft">
         <div>
-          <h2 className="text-lg font-medium text-ink">Export</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">Download every non-deleted note as JSON or Markdown.</p>
+          <h2 className="text-lg font-medium text-ink">导出</h2>
+          <p className="mt-1 text-sm leading-6 text-muted">下载所有未删除记录，支持 JSON 和 Markdown。</p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="button" className="link-button" onClick={exportJson}>
               <Download size={16} />
@@ -36,8 +36,8 @@ export function SettingsPage() {
           </div>
         </div>
         <div className="border-t border-line pt-5 text-sm leading-7 text-muted">
-          <p>This V1 has no login, registration, email, or access restriction.</p>
-          <p>Anyone who knows the URL can theoretically access the pages and API.</p>
+          <p>V1 不包含登录、注册、邮箱验证或访问限制。</p>
+          <p>知道网址的人理论上可以访问页面和接口。</p>
         </div>
       </div>
     </section>

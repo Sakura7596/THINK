@@ -4,9 +4,9 @@ import type { Note } from '../types/note'
 
 const note: Note = {
   id: 'note-1',
-  title: 'A small thought',
-  content: 'Line one\n\nLine two',
-  tags: ['idea', 'daily'],
+  title: '一个小想法',
+  content: '第一行\n\n第二行',
+  tags: ['灵感', '日常'],
   is_pinned: false,
   is_archived: false,
   is_deleted: false,
@@ -21,13 +21,13 @@ describe('createExcerpt', () => {
 })
 
 describe('exportNotesAsMarkdown', () => {
-  it('renders notes with metadata and content', () => {
+  it('renders notes with Chinese metadata and content', () => {
     const markdown = exportNotesAsMarkdown([note], new Date('2026-06-29T10:00:00.000Z'))
 
-    expect(markdown).toContain('# think export')
-    expect(markdown).toContain('Exported at: 2026-06-29 10:00')
-    expect(markdown).toContain('## A small thought')
-    expect(markdown).toContain('Tags: idea, daily')
-    expect(markdown).toContain('Line one\n\nLine two')
+    expect(markdown).toContain('# think 导出')
+    expect(markdown).toContain('导出时间：2026-06-29 10:00')
+    expect(markdown).toContain('## 一个小想法')
+    expect(markdown).toContain('标签：灵感, 日常')
+    expect(markdown).toContain('第一行\n\n第二行')
   })
 })

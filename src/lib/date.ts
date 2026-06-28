@@ -5,15 +5,15 @@ export function relativeTime(value: string): string {
   const hour = 60 * minute
   const day = 24 * hour
 
-  if (diff < minute) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
+  if (diff < minute) return '刚刚'
+  if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`
+  if (diff < day) return `${Math.floor(diff / hour)} 小时前`
 
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export function readableDate(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
+  return new Date(value).toLocaleString('zh-CN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

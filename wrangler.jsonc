@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "think",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-06-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "think.minamir.cn",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://afhiyhkfqykchpihoude.supabase.co"
+  },
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "build": {
+    "command": "npm run build"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

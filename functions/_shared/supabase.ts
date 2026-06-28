@@ -5,6 +5,10 @@ export type Env = {
   SUPABASE_SERVICE_ROLE_KEY: string
 }
 
+export type WorkerEnv = Env & {
+  ASSETS?: Fetcher
+}
+
 export type DbNote = {
   id: string
   title: string
@@ -19,7 +23,7 @@ export type DbNote = {
 
 export function getSupabase(env: Env): SupabaseClient {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Missing Supabase environment variables')
+    throw new Error('缺少 Supabase 环境变量')
   }
 
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {

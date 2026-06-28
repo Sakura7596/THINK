@@ -125,17 +125,17 @@ export function NoteEditor({ note }: { note?: Note }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link to="/notes" className="link-button">
           <ArrowLeft size={16} />
-          notes
+          返回记录
         </Link>
         <div className="flex items-center gap-2">
           <SaveStatus state={saveState} />
-          <button className="icon-button" type="button" onClick={togglePin} title={draft.is_pinned ? 'Unpin' : 'Pin'}>
+          <button className="icon-button" type="button" onClick={togglePin} title={draft.is_pinned ? '取消置顶' : '置顶'}>
             {draft.is_pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
-          <button className="icon-button" type="button" onClick={toggleArchive} title={draft.is_archived ? 'Unarchive' : 'Archive'}>
+          <button className="icon-button" type="button" onClick={toggleArchive} title={draft.is_archived ? '取消归档' : '归档'}>
             <Archive size={16} />
           </button>
-          <button className="icon-button" type="button" onClick={remove} title="Delete">
+          <button className="icon-button" type="button" onClick={remove} title="删除">
             <Trash2 size={16} />
           </button>
         </div>
@@ -143,9 +143,9 @@ export function NoteEditor({ note }: { note?: Note }) {
 
       {restoreAvailable ? (
         <div className="mb-5 flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
-          <span>A local draft is available.</span>
+          <span>发现本地草稿。</span>
           <button type="button" className="text-accent" onClick={restoreDraft}>
-            restore
+            恢复
           </button>
         </div>
       ) : null}
@@ -155,13 +155,13 @@ export function NoteEditor({ note }: { note?: Note }) {
           className="mb-5 w-full border-none bg-transparent text-3xl font-medium text-ink outline-none placeholder:text-muted/55"
           value={draft.title}
           onChange={(event) => updateDraft({ title: event.target.value })}
-          placeholder="Untitled"
+          placeholder="未命名"
         />
         <textarea
           className="min-h-[48vh] w-full border-none bg-transparent text-base leading-8 text-ink outline-none placeholder:text-muted/65"
           value={draft.content}
           onChange={(event) => updateDraft({ content: event.target.value })}
-          placeholder="Write anything..."
+          placeholder="写点什么..."
         />
         <div className="mt-6 border-t border-line pt-5">
           <TagInput tags={draft.tags} onChange={(tags) => updateDraft({ tags })} />
@@ -170,7 +170,7 @@ export function NoteEditor({ note }: { note?: Note }) {
 
       {savedNote ? (
         <p className="mt-4 text-sm text-muted">
-          Created {readableDate(savedNote.created_at)} · Updated {readableDate(savedNote.updated_at)}
+          创建于 {readableDate(savedNote.created_at)} · 更新于 {readableDate(savedNote.updated_at)}
         </p>
       ) : null}
     </section>

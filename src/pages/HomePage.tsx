@@ -37,16 +37,16 @@ export function HomePage() {
       <div className="mb-10 pt-4 sm:pt-8">
         <p className="mb-3 text-sm text-muted">think</p>
         <h1 className="max-w-2xl text-4xl font-semibold leading-tight text-ink sm:text-5xl">
-          A quiet place for unfinished thoughts.
+          一个存放未完成想法的地方。
         </h1>
-        <p className="mt-4 text-lg leading-8 text-muted">一个存放未完成想法的地方。</p>
+        <p className="mt-4 text-lg leading-8 text-muted">轻一点，快一点，先写下来。</p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Link className="link-button" to="/write">
             <PenLine size={16} />
-            write
+            写下
           </Link>
           <Link className="link-button" to="/notes">
-            notes
+            查看记录
           </Link>
         </div>
       </div>
@@ -58,7 +58,7 @@ export function HomePage() {
           ))}
         </div>
       ) : (
-        <EmptyState title="No thoughts yet." action={<Link className="link-button" to="/write">Start with anything.</Link>} />
+        <EmptyState title="还没有记录。" action={<Link className="link-button" to="/write">从任何一句话开始。</Link>} />
       )}
     </section>
   )

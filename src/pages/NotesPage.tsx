@@ -56,24 +56,24 @@ export function NotesPage() {
     <section className="mx-auto max-w-3xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-ink">notes</h1>
-          <p className="mt-2 text-muted">All active thoughts, newest first.</p>
+          <h1 className="text-3xl font-semibold text-ink">记录</h1>
+          <p className="mt-2 text-muted">所有未归档记录，按最近更新排序。</p>
         </div>
-        <Link className="link-button" to="/write">new</Link>
+        <Link className="link-button" to="/write">新建</Link>
       </div>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto]">
         <label className="relative block">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
-          <input className="field pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" />
+          <input className="field pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索" />
         </label>
         <select className="field sm:w-44" value={selectedTag} onChange={(event) => setSelectedTag(event.target.value)}>
-          <option value="">All tags</option>
+          <option value="">全部标签</option>
           {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
         </select>
       </div>
 
-      {loading ? <p className="text-muted">loading...</p> : null}
+      {loading ? <p className="text-muted">加载中...</p> : null}
       {!loading && visible.length ? (
         <div className="rounded-md border border-line bg-surface/70 px-5">
           {visible.map((note) => (
@@ -81,7 +81,7 @@ export function NotesPage() {
           ))}
         </div>
       ) : null}
-      {!loading && !visible.length ? <EmptyState title="Nothing here yet." action={<Link className="link-button" to="/write">Write something small.</Link>} /> : null}
+      {!loading && !visible.length ? <EmptyState title="这里还没有内容。" action={<Link className="link-button" to="/write">写一点小东西。</Link>} /> : null}
     </section>
   )
 }
