@@ -143,7 +143,14 @@ export default {
         return text(message, { status: 500 })
       }
     }
-    if (env.ASSETS) return env.ASSETS.fetch(request)
-    return text('Assets binding is not configured', { status: 500 })
+    if (env.ASSETS) {
+      const assetResponse = await env.ASSETS.fetch(request)
+      if (assetResponse.status !== 404) return assetResponse
+
+      const fallbackUrl = new URL(request.url)
+      fallbackUrl.pathname = '/'
+      return env.ASSETS.fetch(new Request(fallbackUrl, request))
+    }
+    return text('静态资源绑定未配置', { status: 500 })
   },
 } satisfies ExportedHandler<WorkerEnv>
