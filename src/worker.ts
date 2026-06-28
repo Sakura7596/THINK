@@ -135,7 +135,14 @@ async function handleApi(request: Request, env: WorkerEnv): Promise<Response> {
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname.startsWith('/api/')) return handleApi(request, env)
+    if (url.pathname.startsWith('/api/')) {
+      try {
+        return await handleApi(request, env)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '未知错误'
+        return text(message, { status: 500 })
+      }
+    }
     if (env.ASSETS) return env.ASSETS.fetch(request)
     return text('Assets binding is not configured', { status: 500 })
   },
