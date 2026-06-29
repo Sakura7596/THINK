@@ -1,4 +1,4 @@
-import { SupabaseRestError, isEmptyNotePayload, json, notePayload, readJson, supabaseRest, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
+import { SupabaseRestError, isEmptyNotePayload, json, notePayload, readJson, serviceKeyType, supabaseRest, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
 
 function formatDateTime(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value)
@@ -150,6 +150,7 @@ async function handleApi(request: Request, env: WorkerEnv): Promise<Response> {
       ok: true,
       hasSupabaseUrl: Boolean(env.SUPABASE_URL),
       hasServiceRoleKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
+      keyType: env.SUPABASE_SERVICE_ROLE_KEY ? serviceKeyType(env) : 'missing',
     }
 
     if (url.searchParams.get('db') === '1') {

@@ -20,9 +20,17 @@ export type DbNote = {
 }
 
 export function assertEnv(env: Env): void {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!env.SUPABASE_URL.trim() || !env.SUPABASE_SERVICE_ROLE_KEY.trim()) {
     throw new Error('缺少 Supabase 环境变量')
   }
+}
+
+export function serviceKeyType(env: Env): 'secret' | 'publishable' | 'jwt' | 'unknown' {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY.trim()
+  if (key.startsWith('sb_secret_')) return 'secret'
+  if (key.startsWith('sb_publishable_')) return 'publishable'
+  if (key.split('.').length === 3) return 'jwt'
+  return 'unknown'
 }
 
 export function json(data: unknown, init: ResponseInit = {}): Response {
@@ -88,11 +96,13 @@ type SupabaseRequestOptions = {
 
 export async function supabaseRest<T>(env: Env, path: string, options: SupabaseRequestOptions = {}): Promise<T> {
   assertEnv(env)
-  const response = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}${options.query ?? ''}`, {
+  const supabaseUrl = env.SUPABASE_URL.trim().replace(/\/$/, '')
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY.trim()
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}${options.query ?? ''}`, {
     method: options.method ?? 'GET',
     headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      ...(env.SUPABASE_SERVICE_ROLE_KEY.startsWith('sb_secret_') ? {} : { Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` }),
+      apikey: serviceKey,
+      ...(serviceKey.startsWith('sb_secret_') ? {} : { Authorization: `Bearer ${serviceKey}` }),
       'Content-Type': 'application/json',
       ...(options.prefer ? { Prefer: options.prefer } : {}),
     },
