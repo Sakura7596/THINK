@@ -1,38 +1,39 @@
-import { getSupabase, isEmptyNotePayload, json, notePayload, readJson, text, type Env } from '../_shared/supabase'
+import { isEmptyNotePayload, json, notePayload, readJson, supabaseRest, text, type DbNote, type Env } from '../_shared/supabase'
 
-export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
-  const supabase = getSupabase(env)
+function notesQuery(request: Request): string {
   const url = new URL(request.url)
   const archived = url.searchParams.get('archived')
   const limit = Number(url.searchParams.get('limit') ?? 0)
+  const params = new URLSearchParams({
+    select: '*',
+    is_deleted: 'eq.false',
+    order: 'is_pinned.desc,updated_at.desc',
+  })
 
-  let query = supabase
-    .from('notes')
-    .select('*')
-    .eq('is_deleted', false)
-    .order('is_pinned', { ascending: false })
-    .order('updated_at', { ascending: false })
+  if (archived === 'true') params.set('is_archived', 'eq.true')
+  if (archived === 'false') params.set('is_archived', 'eq.false')
+  if (Number.isFinite(limit) && limit > 0) params.set('limit', String(Math.min(limit, 200)))
 
-  if (archived === 'true') query = query.eq('is_archived', true)
-  if (archived === 'false') query = query.eq('is_archived', false)
-  if (Number.isFinite(limit) && limit > 0) query = query.limit(Math.min(limit, 200))
+  return `?${params.toString()}`
+}
 
-  const { data, error } = await query
-  if (error) return text(error.message, { status: 500 })
-
-  return json(data ?? [])
+export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
+  const data = await supabaseRest<DbNote[]>(env, 'notes', { query: notesQuery(request) })
+  return json(data)
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
-  const supabase = getSupabase(env)
   const payload = notePayload(await readJson(request))
 
   if (isEmptyNotePayload(payload)) {
-    return text('Title and content cannot both be empty', { status: 400 })
+    return text('标题和正文不能同时为空', { status: 400 })
   }
 
-  const { data, error } = await supabase.from('notes').insert(payload).select('*').single()
-  if (error) return text(error.message, { status: 500 })
+  const data = await supabaseRest<DbNote[]>(env, 'notes', {
+    method: 'POST',
+    body: payload,
+    prefer: 'return=representation',
+  })
 
-  return json(data, { status: 201 })
+  return json(data[0], { status: 201 })
 }

@@ -1,5 +1,3 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
-
 export type Env = {
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
@@ -21,14 +19,10 @@ export type DbNote = {
   updated_at: string
 }
 
-export function getSupabase(env: Env): SupabaseClient {
+export function assertEnv(env: Env): void {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('缺少 Supabase 环境变量')
   }
-
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  })
 }
 
 export function json(data: unknown, init: ResponseInit = {}): Response {
@@ -76,4 +70,32 @@ export function notePayload(input: Record<string, unknown>) {
 
 export function isEmptyNotePayload(payload: Record<string, unknown>): boolean {
   return !String(payload.title ?? '').trim() && !String(payload.content ?? '').trim()
+}
+
+type SupabaseRequestOptions = {
+  method?: string
+  query?: string
+  body?: unknown
+  prefer?: string
+}
+
+export async function supabaseRest<T>(env: Env, path: string, options: SupabaseRequestOptions = {}): Promise<T> {
+  assertEnv(env)
+  const response = await fetch(`${env.SUPABASE_URL}/rest/v1/${path}${options.query ?? ''}`, {
+    method: options.method ?? 'GET',
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.prefer ? { Prefer: options.prefer } : {}),
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  })
+
+  const body = await response.text()
+  if (!response.ok) {
+    throw new Error(`Supabase REST failed: ${response.status} ${response.statusText}`)
+  }
+
+  return body ? (JSON.parse(body) as T) : ([] as T)
 }

@@ -1,4 +1,4 @@
-import { getSupabase, text, type DbNote, type Env } from '../_shared/supabase'
+import { supabaseRest, type DbNote, type Env } from '../_shared/supabase'
 
 function formatDateTime(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value)
@@ -12,40 +12,37 @@ function formatDateTime(value: string | Date): string {
 
 function markdown(notes: DbNote[], exportedAt = new Date()): string {
   const sections = notes.map((note) => [
-    `## ${note.title.trim() || 'Untitled'}`,
+    `## ${note.title.trim() || '未命名'}`,
     '',
-    `Created: ${formatDateTime(note.created_at)}`,
-    `Updated: ${formatDateTime(note.updated_at)}`,
-    `Tags: ${note.tags.length ? note.tags.join(', ') : '-'}`,
+    `创建时间：${formatDateTime(note.created_at)}`,
+    `更新时间：${formatDateTime(note.updated_at)}`,
+    `标签：${note.tags.length ? note.tags.join(', ') : '-'}`,
     '',
     note.content,
     '',
     '---',
   ].join('\n'))
 
-  return ['# think export', '', `Exported at: ${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
+  return ['# think 导出', '', `导出时间：${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
-  const supabase = getSupabase(env)
   const url = new URL(request.url)
   const format = url.searchParams.get('format') ?? 'json'
-
-  const { data, error } = await supabase
-    .from('notes')
-    .select('*')
-    .eq('is_deleted', false)
-    .order('updated_at', { ascending: false })
-
-  if (error) return text(error.message, { status: 500 })
+  const params = new URLSearchParams({
+    select: '*',
+    is_deleted: 'eq.false',
+    order: 'updated_at.desc',
+  })
+  const data = await supabaseRest<DbNote[]>(env, 'notes', { query: `?${params.toString()}` })
 
   if (format === 'markdown') {
-    return new Response(markdown((data ?? []) as DbNote[]), {
+    return new Response(markdown(data), {
       headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
     })
   }
 
-  return new Response(JSON.stringify(data ?? [], null, 2), {
+  return new Response(JSON.stringify(data, null, 2), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   })
 }

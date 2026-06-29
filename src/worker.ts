@@ -1,4 +1,4 @@
-import { getSupabase, isEmptyNotePayload, json, notePayload, readJson, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
+import { isEmptyNotePayload, json, notePayload, readJson, supabaseRest, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
 
 function formatDateTime(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value)
@@ -26,86 +26,116 @@ function markdown(notes: DbNote[], exportedAt = new Date()): string {
   return ['# think 导出', '', `导出时间：${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
 }
 
-async function listNotes(env: WorkerEnv, request: Request): Promise<Response> {
-  const supabase = getSupabase(env)
+function notesQuery(request: Request): string {
   const url = new URL(request.url)
   const archived = url.searchParams.get('archived')
   const limit = Number(url.searchParams.get('limit') ?? 0)
+  const params = new URLSearchParams({
+    select: '*',
+    is_deleted: 'eq.false',
+    order: 'is_pinned.desc,updated_at.desc',
+  })
 
-  let query = supabase
-    .from('notes')
-    .select('*')
-    .eq('is_deleted', false)
-    .order('is_pinned', { ascending: false })
-    .order('updated_at', { ascending: false })
+  if (archived === 'true') params.set('is_archived', 'eq.true')
+  if (archived === 'false') params.set('is_archived', 'eq.false')
+  if (Number.isFinite(limit) && limit > 0) params.set('limit', String(Math.min(limit, 200)))
 
-  if (archived === 'true') query = query.eq('is_archived', true)
-  if (archived === 'false') query = query.eq('is_archived', false)
-  if (Number.isFinite(limit) && limit > 0) query = query.limit(Math.min(limit, 200))
+  return `?${params.toString()}`
+}
 
-  const { data, error } = await query
-  if (error) return text(error.message, { status: 500 })
-  return json(data ?? [])
+function noteByIdQuery(id: string): string {
+  const params = new URLSearchParams({
+    select: '*',
+    id: `eq.${id}`,
+    is_deleted: 'eq.false',
+    limit: '1',
+  })
+  return `?${params.toString()}`
+}
+
+async function findNote(env: WorkerEnv, id: string): Promise<DbNote | null> {
+  const data = await supabaseRest<DbNote[]>(env, 'notes', { query: noteByIdQuery(id) })
+  return data[0] ?? null
+}
+
+async function listNotes(env: WorkerEnv, request: Request): Promise<Response> {
+  const data = await supabaseRest<DbNote[]>(env, 'notes', { query: notesQuery(request) })
+  return json(data)
 }
 
 async function createNote(env: WorkerEnv, request: Request): Promise<Response> {
-  const supabase = getSupabase(env)
   const payload = notePayload(await readJson(request))
 
   if (isEmptyNotePayload(payload)) {
     return text('标题和正文不能同时为空', { status: 400 })
   }
 
-  const { data, error } = await supabase.from('notes').insert(payload).select('*').single()
-  if (error) return text(error.message, { status: 500 })
-  return json(data, { status: 201 })
+  const data = await supabaseRest<DbNote[]>(env, 'notes', {
+    method: 'POST',
+    body: payload,
+    prefer: 'return=representation',
+  })
+  return json(data[0], { status: 201 })
 }
 
 async function getNote(env: WorkerEnv, id: string): Promise<Response> {
-  const supabase = getSupabase(env)
-  const { data, error } = await supabase.from('notes').select('*').eq('id', id).eq('is_deleted', false).single()
-  if (error) return text(error.message, { status: 404 })
-  return json(data)
+  const note = await findNote(env, id)
+  if (!note) return text('笔记不存在', { status: 404 })
+  return json(note)
 }
 
 async function updateNote(env: WorkerEnv, request: Request, id: string): Promise<Response> {
-  const supabase = getSupabase(env)
   const payload = notePayload(await readJson(request))
 
   if ('title' in payload || 'content' in payload) {
-    const existing = await supabase.from('notes').select('title, content').eq('id', id).single()
-    if (existing.error) return text(existing.error.message, { status: 404 })
-    const merged = { ...existing.data, ...payload }
+    const existing = await findNote(env, id)
+    if (!existing) return text('笔记不存在', { status: 404 })
+    const merged = { title: existing.title, content: existing.content, ...payload }
     if (isEmptyNotePayload(merged)) return text('标题和正文不能同时为空', { status: 400 })
   }
 
-  const { data, error } = await supabase.from('notes').update(payload).eq('id', id).eq('is_deleted', false).select('*').single()
-  if (error) return text(error.message, { status: 500 })
-  return json(data)
+  const params = new URLSearchParams({ id: `eq.${id}`, is_deleted: 'eq.false' })
+  const data = await supabaseRest<DbNote[]>(env, 'notes', {
+    method: 'PATCH',
+    query: `?${params.toString()}`,
+    body: payload,
+    prefer: 'return=representation',
+  })
+
+  if (!data[0]) return text('笔记不存在', { status: 404 })
+  return json(data[0])
 }
 
 async function deleteNote(env: WorkerEnv, id: string): Promise<Response> {
-  const supabase = getSupabase(env)
-  const { data, error } = await supabase.from('notes').update({ is_deleted: true }).eq('id', id).select('*').single()
-  if (error) return text(error.message, { status: 500 })
-  return json(data)
+  const params = new URLSearchParams({ id: `eq.${id}`, is_deleted: 'eq.false' })
+  const data = await supabaseRest<DbNote[]>(env, 'notes', {
+    method: 'PATCH',
+    query: `?${params.toString()}`,
+    body: { is_deleted: true },
+    prefer: 'return=representation',
+  })
+
+  if (!data[0]) return text('笔记不存在', { status: 404 })
+  return json(data[0])
 }
 
 async function exportNotes(env: WorkerEnv, request: Request): Promise<Response> {
-  const supabase = getSupabase(env)
   const url = new URL(request.url)
   const format = url.searchParams.get('format') ?? 'json'
-  const { data, error } = await supabase.from('notes').select('*').eq('is_deleted', false).order('updated_at', { ascending: false })
-
-  if (error) return text(error.message, { status: 500 })
+  const params = new URLSearchParams({
+    select: '*',
+    is_deleted: 'eq.false',
+    order: 'updated_at.desc',
+  })
+  const data = await supabaseRest<DbNote[]>(env, 'notes', { query: `?${params.toString()}` })
 
   if (format === 'markdown') {
-    return new Response(markdown((data ?? []) as DbNote[]), {
+    return new Response(markdown(data), {
       headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
     })
   }
 
-  return new Response(JSON.stringify(data ?? [], null, 2), {
+  return new Response(JSON.stringify(data, null, 2), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   })
 }
@@ -124,13 +154,10 @@ async function handleApi(request: Request, env: WorkerEnv): Promise<Response> {
 
     if (url.searchParams.get('db') === '1') {
       try {
-        const supabase = getSupabase(env)
-        const { count, error } = await supabase.from('notes').select('id', { count: 'exact', head: true })
-        result.database = error
-          ? { ok: false, code: error.code, message: error.message, details: error.details, hint: error.hint }
-          : { ok: true, count }
-      } catch (error) {
-        result.database = { ok: false, message: error instanceof Error ? error.message : String(error) }
+        await supabaseRest<DbNote[]>(env, 'notes', { query: '?select=id&limit=1' })
+        result.database = { ok: true }
+      } catch {
+        result.database = { ok: false }
       }
     }
 
@@ -159,9 +186,8 @@ export default {
     if (url.pathname.startsWith('/api/')) {
       try {
         return await handleApi(request, env)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : '未知错误'
-        return text(message, { status: 500 })
+      } catch {
+        return text('保存服务暂时不可用', { status: 500 })
       }
     }
     if (env.ASSETS) {
