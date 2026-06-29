@@ -72,6 +72,13 @@ export function isEmptyNotePayload(payload: Record<string, unknown>): boolean {
   return !String(payload.title ?? '').trim() && !String(payload.content ?? '').trim()
 }
 
+export class SupabaseRestError extends Error {
+  constructor(public readonly status: number, statusText: string) {
+    super(`Supabase REST failed: ${status} ${statusText}`)
+    this.name = 'SupabaseRestError'
+  }
+}
+
 type SupabaseRequestOptions = {
   method?: string
   query?: string
@@ -94,7 +101,7 @@ export async function supabaseRest<T>(env: Env, path: string, options: SupabaseR
 
   const body = await response.text()
   if (!response.ok) {
-    throw new Error(`Supabase REST failed: ${response.status} ${response.statusText}`)
+    throw new SupabaseRestError(response.status, response.statusText)
   }
 
   return body ? (JSON.parse(body) as T) : ([] as T)

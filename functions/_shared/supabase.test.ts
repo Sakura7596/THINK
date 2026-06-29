@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { supabaseRest } from './supabase'
+import { SupabaseRestError, supabaseRest } from './supabase'
 
 describe('supabaseRest', () => {
   afterEach(() => {
@@ -37,8 +37,11 @@ describe('supabaseRest', () => {
   it('does not expose Supabase response bodies in thrown errors', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('database internals', { status: 500, statusText: 'Internal Server Error' })))
 
-    await expect(supabaseRest({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service-key' }, 'notes')).rejects.toThrow(
-      'Supabase REST failed: 500 Internal Server Error',
-    )
+    await expect(supabaseRest({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service-key' }, 'notes')).rejects.toMatchObject({
+      name: 'SupabaseRestError',
+      message: 'Supabase REST failed: 500 Internal Server Error',
+      status: 500,
+    })
+    await expect(supabaseRest({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service-key' }, 'notes')).rejects.toBeInstanceOf(SupabaseRestError)
   })
 })

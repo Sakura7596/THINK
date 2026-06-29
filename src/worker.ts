@@ -1,4 +1,4 @@
-import { isEmptyNotePayload, json, notePayload, readJson, supabaseRest, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
+import { SupabaseRestError, isEmptyNotePayload, json, notePayload, readJson, supabaseRest, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
 
 function formatDateTime(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value)
@@ -156,8 +156,8 @@ async function handleApi(request: Request, env: WorkerEnv): Promise<Response> {
       try {
         await supabaseRest<DbNote[]>(env, 'notes', { query: '?select=id&limit=1' })
         result.database = { ok: true }
-      } catch {
-        result.database = { ok: false }
+      } catch (error) {
+        result.database = error instanceof SupabaseRestError ? { ok: false, status: error.status } : { ok: false }
       }
     }
 
