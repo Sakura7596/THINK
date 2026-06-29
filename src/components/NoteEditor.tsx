@@ -1,5 +1,5 @@
-import { ArrowLeft, Archive, Pin, PinOff, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, Archive, Pin, PinOff, Save, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createNote, deleteNote, updateNote } from '../lib/api'
 import { readableDate } from '../lib/date'
@@ -36,11 +36,11 @@ export function NoteEditor({ note }: { note?: Note }) {
   }))
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [restoreAvailable, setRestoreAvailable] = useState(() => Boolean(localStorage.getItem(draftKey(note?.id))))
-  const firstRun = useRef(true)
   const key = useMemo(() => draftKey(savedNote?.id), [savedNote?.id])
+  const canSave = hasContent(draft) && saveState !== 'saving'
 
-  const saveDraft = useCallback(async () => {
-    if (!hasContent(draft)) return
+  async function saveDraft() {
+    if (!canSave) return
 
     setSaveState('saving')
     try {
@@ -49,8 +49,12 @@ export function NoteEditor({ note }: { note?: Note }) {
         setSavedNote(updated)
       } else {
         const created = await createNote(draft)
+        localStorage.removeItem(key)
+        setRestoreAvailable(false)
+        setSaveState('saved')
         setSavedNote(created)
         navigate(`/notes/${created.id}`, { replace: true })
+        return
       }
       localStorage.removeItem(key)
       setRestoreAvailable(false)
@@ -60,23 +64,14 @@ export function NoteEditor({ note }: { note?: Note }) {
       setRestoreAvailable(true)
       setSaveState('error')
     }
-  }, [draft, key, navigate, savedNote])
-
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false
-      return
-    }
-
-    const timer = window.setTimeout(() => {
-      void saveDraft()
-    }, 1500)
-
-    return () => window.clearTimeout(timer)
-  }, [saveDraft])
+  }
 
   function updateDraft(next: Partial<Draft>) {
-    setDraft((current) => ({ ...current, ...next }))
+    setDraft((current) => {
+      const updated = { ...current, ...next }
+      setSaveState(hasContent(updated) ? 'error' : 'idle')
+      return updated
+    })
   }
 
   function restoreDraft() {
@@ -85,13 +80,15 @@ export function NoteEditor({ note }: { note?: Note }) {
 
     try {
       const parsed = JSON.parse(local) as Draft
-      setDraft({
+      const restored = {
         title: parsed.title ?? '',
         content: parsed.content ?? '',
         tags: Array.isArray(parsed.tags) ? normalizeTags(parsed.tags) : [],
         is_pinned: Boolean(parsed.is_pinned),
         is_archived: Boolean(parsed.is_archived),
-      })
+      }
+      setDraft(restored)
+      setSaveState(hasContent(restored) ? 'error' : 'idle')
       setRestoreAvailable(false)
     } catch {
       localStorage.removeItem(key)
@@ -99,16 +96,12 @@ export function NoteEditor({ note }: { note?: Note }) {
     }
   }
 
-  async function togglePin() {
-    const next = !draft.is_pinned
-    updateDraft({ is_pinned: next })
-    if (savedNote) await updateNote(savedNote.id, { is_pinned: next })
+  function togglePin() {
+    updateDraft({ is_pinned: !draft.is_pinned })
   }
 
-  async function toggleArchive() {
-    const next = !draft.is_archived
-    updateDraft({ is_archived: next })
-    if (savedNote) await updateNote(savedNote.id, { is_archived: next })
+  function toggleArchive() {
+    updateDraft({ is_archived: !draft.is_archived })
   }
 
   async function remove() {
@@ -129,6 +122,10 @@ export function NoteEditor({ note }: { note?: Note }) {
         </Link>
         <div className="flex items-center gap-2">
           <SaveStatus state={saveState} />
+          <button className="link-button" type="button" onClick={saveDraft} disabled={!canSave}>
+            <Save size={16} />
+            保存
+          </button>
           <button className="icon-button" type="button" onClick={togglePin} title={draft.is_pinned ? '取消置顶' : '置顶'}>
             {draft.is_pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
