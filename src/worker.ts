@@ -151,12 +151,14 @@ export default {
       }
     }
     if (env.ASSETS) {
-      const assetResponse = await env.ASSETS.fetch(request)
-      if (assetResponse.status !== 404) return assetResponse
+      const hasFileExtension = /\.[a-zA-Z0-9]+$/.test(url.pathname)
+      if (!hasFileExtension) {
+        const fallbackUrl = new URL(request.url)
+        fallbackUrl.pathname = '/'
+        return env.ASSETS.fetch(new Request(fallbackUrl, request))
+      }
 
-      const fallbackUrl = new URL(request.url)
-      fallbackUrl.pathname = '/'
-      return env.ASSETS.fetch(new Request(fallbackUrl, request))
+      return env.ASSETS.fetch(request)
     }
     return text('静态资源绑定未配置', { status: 500 })
   },
