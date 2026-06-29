@@ -115,6 +115,13 @@ async function handleApi(request: Request, env: WorkerEnv): Promise<Response> {
   const parts = url.pathname.split('/').filter(Boolean)
 
   if (parts[0] !== 'api') return text('Not found', { status: 404 })
+  if (parts[1] === 'health' && request.method === 'GET') {
+    return json({
+      ok: true,
+      hasSupabaseUrl: Boolean(env.SUPABASE_URL),
+      hasServiceRoleKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
+    })
+  }
   if (parts[1] === 'export' && request.method === 'GET') return exportNotes(env, request)
 
   if (parts[1] === 'notes' && parts.length === 2) {
