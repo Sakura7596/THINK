@@ -116,11 +116,25 @@ async function handleApi(request: Request, env: WorkerEnv): Promise<Response> {
 
   if (parts[0] !== 'api') return text('Not found', { status: 404 })
   if (parts[1] === 'health' && request.method === 'GET') {
-    return json({
+    const result: Record<string, unknown> = {
       ok: true,
       hasSupabaseUrl: Boolean(env.SUPABASE_URL),
       hasServiceRoleKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
-    })
+    }
+
+    if (url.searchParams.get('db') === '1') {
+      try {
+        const supabase = getSupabase(env)
+        const { count, error } = await supabase.from('notes').select('id', { count: 'exact', head: true })
+        result.database = error
+          ? { ok: false, code: error.code, message: error.message, details: error.details, hint: error.hint }
+          : { ok: true, count }
+      } catch (error) {
+        result.database = { ok: false, message: error instanceof Error ? error.message : String(error) }
+      }
+    }
+
+    return json(result)
   }
   if (parts[1] === 'export' && request.method === 'GET') return exportNotes(env, request)
 
