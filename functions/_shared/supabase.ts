@@ -92,7 +92,7 @@ export async function supabaseRest<T>(env: Env, path: string, options: SupabaseR
     method: options.method ?? 'GET',
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      ...(env.SUPABASE_SERVICE_ROLE_KEY.startsWith('sb_secret_') ? {} : { Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` }),
       'Content-Type': 'application/json',
       ...(options.prefer ? { Prefer: options.prefer } : {}),
     },

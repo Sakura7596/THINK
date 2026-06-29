@@ -34,6 +34,25 @@ describe('supabaseRest', () => {
     })
   })
 
+  it('does not send sb_secret keys as bearer tokens', async () => {
+    const fetchMock = vi.fn(async () => new Response('[]', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await supabaseRest(
+      { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_test-key' },
+      'notes',
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith('https://example.supabase.co/rest/v1/notes', {
+      method: 'GET',
+      headers: {
+        apikey: 'sb_secret_test-key',
+        'Content-Type': 'application/json',
+      },
+      body: undefined,
+    })
+  })
+
   it('does not expose Supabase response bodies in thrown errors', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('database internals', { status: 500, statusText: 'Internal Server Error' })))
 
