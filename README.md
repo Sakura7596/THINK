@@ -51,7 +51,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
-`SUPABASE_URL` 已写入 `wrangler.jsonc` 的 `vars`，因为它不是密钥。`SUPABASE_SERVICE_ROLE_KEY` 必须使用 Secret / 密钥方式配置，不能提交到 GitHub。
+`SUPABASE_URL` 已写入 `wrangler.jsonc` 的 `vars`，因为它不是密钥。`SUPABASE_SERVICE_ROLE_KEY` 必须使用 Secret / 密钥方式配置，不能提交到 GitHub。当前线上 Worker 使用 Supabase Legacy `service_role` JWT；如果改用新版 `sb_secret_...` 后 Data API 返回 403，请切回 Legacy `service_role` 或确认 Supabase 项目已给对应角色授权。
 
 ## Supabase 初始化
 

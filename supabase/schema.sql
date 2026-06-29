@@ -40,3 +40,6 @@ on public.notes (is_archived);
 
 create index if not exists notes_tags_idx
 on public.notes using gin (tags);
+
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table public.notes to service_role;
