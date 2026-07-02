@@ -8,3 +8,4 @@ dist
 .env.local
 .vite
 wrangler.toml
+.superpowers/
