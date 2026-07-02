@@ -1,4 +1,26 @@
-import { SupabaseRestError, isEmptyNotePayload, json, notePayload, readJson, serviceKeyType, supabaseRest, text, type DbNote, type WorkerEnv } from '../functions/_shared/supabase'
+import {
+  SupabaseRestError,
+  isEmptyNotePayload,
+  isIsoDate,
+  json,
+  notePayload,
+  readJson,
+  serviceKeyType,
+  supabaseRest,
+  text,
+  type DbNote,
+  type NoteKind,
+  type WorkerEnv,
+} from '../functions/_shared/supabase'
+
+function todayDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function diaryTitle(dateValue: string): string {
+  const date = new Date(`${dateValue}T00:00:00.000Z`)
+  return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日`
+}
 
 function formatDateTime(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value)
@@ -11,17 +33,29 @@ function formatDateTime(value: string | Date): string {
 }
 
 function markdown(notes: DbNote[], exportedAt = new Date()): string {
-  const sections = notes.map((note) => [
-    `## ${note.title.trim() || '未命名'}`,
-    '',
-    `创建时间：${formatDateTime(note.created_at)}`,
-    `更新时间：${formatDateTime(note.updated_at)}`,
-    `标签：${note.tags.length ? note.tags.join(', ') : '-'}`,
-    '',
-    note.content,
-    '',
-    '---',
-  ].join('\n'))
+  const sections = notes.map((note) => {
+    const title = note.title.trim() || '未命名'
+    const tags = note.tags.length ? note.tags.join(', ') : '-'
+    const lines = [
+      `## ${title}`,
+      '',
+      `类型：${note.kind === 'diary' ? '日记' : '思考'}`,
+    ]
+
+    if (note.kind === 'diary' && note.diary_date) lines.push(`日记日期：${note.diary_date}`)
+
+    lines.push(
+      `创建时间：${formatDateTime(note.created_at)}`,
+      `更新时间：${formatDateTime(note.updated_at)}`,
+      `标签：${tags}`,
+      '',
+      note.content,
+      '',
+      '---',
+    )
+
+    return lines.join('\n')
+  })
 
   return ['# think 导出', '', `导出时间：${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')
 }
@@ -29,16 +63,25 @@ function markdown(notes: DbNote[], exportedAt = new Date()): string {
 function notesQuery(request: Request): string {
   const url = new URL(request.url)
   const archived = url.searchParams.get('archived')
+  const kind = url.searchParams.get('kind')
   const limit = Number(url.searchParams.get('limit') ?? 0)
   const params = new URLSearchParams({
     select: '*',
     is_deleted: 'eq.false',
-    order: 'is_pinned.desc,updated_at.desc',
   })
 
+  if (kind === 'thought' || kind === 'diary') params.set('kind', `eq.${kind}`)
   if (archived === 'true') params.set('is_archived', 'eq.true')
   if (archived === 'false') params.set('is_archived', 'eq.false')
   if (Number.isFinite(limit) && limit > 0) params.set('limit', String(Math.min(limit, 200)))
+
+  if (kind === 'diary') {
+    params.set('order', 'diary_date.desc,updated_at.desc')
+  } else if (kind === 'thought') {
+    params.set('order', 'is_pinned.desc,updated_at.desc')
+  } else {
+    params.set('order', 'updated_at.desc')
+  }
 
   return `?${params.toString()}`
 }
@@ -53,8 +96,25 @@ function noteByIdQuery(id: string): string {
   return `?${params.toString()}`
 }
 
+function diaryByDateQuery(diaryDate: string, exceptId?: string): string {
+  const params = new URLSearchParams({
+    select: '*',
+    kind: 'eq.diary',
+    diary_date: `eq.${diaryDate}`,
+    is_deleted: 'eq.false',
+    limit: '1',
+  })
+  if (exceptId) params.set('id', `neq.${exceptId}`)
+  return `?${params.toString()}`
+}
+
 async function findNote(env: WorkerEnv, id: string): Promise<DbNote | null> {
   const data = await supabaseRest<DbNote[]>(env, 'notes', { query: noteByIdQuery(id) })
+  return data[0] ?? null
+}
+
+async function findDiaryByDate(env: WorkerEnv, diaryDate: string, exceptId?: string): Promise<DbNote | null> {
+  const data = await supabaseRest<DbNote[]>(env, 'notes', { query: diaryByDateQuery(diaryDate, exceptId) })
   return data[0] ?? null
 }
 
@@ -65,6 +125,20 @@ async function listNotes(env: WorkerEnv, request: Request): Promise<Response> {
 
 async function createNote(env: WorkerEnv, request: Request): Promise<Response> {
   const payload = notePayload(await readJson(request))
+  const kind = (payload.kind as NoteKind | undefined) ?? 'thought'
+  payload.kind = kind
+
+  if (kind === 'diary') {
+    const diaryDate = typeof payload.diary_date === 'string' ? payload.diary_date : todayDate()
+    payload.diary_date = diaryDate
+    payload.is_pinned = false
+    if (!String(payload.title ?? '').trim()) payload.title = diaryTitle(diaryDate)
+
+    const existing = await findDiaryByDate(env, diaryDate)
+    if (existing) return json({ error: 'diary_exists', noteId: existing.id }, { status: 409 })
+  } else {
+    delete payload.diary_date
+  }
 
   if (isEmptyNotePayload(payload)) {
     return text('标题和正文不能同时为空', { status: 400 })
@@ -80,16 +154,33 @@ async function createNote(env: WorkerEnv, request: Request): Promise<Response> {
 
 async function getNote(env: WorkerEnv, id: string): Promise<Response> {
   const note = await findNote(env, id)
-  if (!note) return text('笔记不存在', { status: 404 })
+  if (!note) return text('记录不存在', { status: 404 })
   return json(note)
 }
 
 async function updateNote(env: WorkerEnv, request: Request, id: string): Promise<Response> {
   const payload = notePayload(await readJson(request))
+  const existing = await findNote(env, id)
+  if (!existing) return text('记录不存在', { status: 404 })
+
+  const nextKind = (payload.kind as NoteKind | undefined) ?? existing.kind ?? 'thought'
+  if (nextKind === 'diary') {
+    const diaryDate = typeof payload.diary_date === 'string' ? payload.diary_date : existing.diary_date
+    if (!isIsoDate(diaryDate)) return text('日记日期无效', { status: 400 })
+
+    payload.kind = 'diary'
+    payload.diary_date = diaryDate
+    payload.is_pinned = false
+    if (!String(payload.title ?? existing.title ?? '').trim()) payload.title = diaryTitle(diaryDate)
+
+    const duplicate = await findDiaryByDate(env, diaryDate, id)
+    if (duplicate) return json({ error: 'diary_exists', noteId: duplicate.id }, { status: 409 })
+  } else {
+    payload.kind = 'thought'
+    delete payload.diary_date
+  }
 
   if ('title' in payload || 'content' in payload) {
-    const existing = await findNote(env, id)
-    if (!existing) return text('笔记不存在', { status: 404 })
     const merged = { title: existing.title, content: existing.content, ...payload }
     if (isEmptyNotePayload(merged)) return text('标题和正文不能同时为空', { status: 400 })
   }
@@ -102,7 +193,7 @@ async function updateNote(env: WorkerEnv, request: Request, id: string): Promise
     prefer: 'return=representation',
   })
 
-  if (!data[0]) return text('笔记不存在', { status: 404 })
+  if (!data[0]) return text('记录不存在', { status: 404 })
   return json(data[0])
 }
 
@@ -115,7 +206,7 @@ async function deleteNote(env: WorkerEnv, id: string): Promise<Response> {
     prefer: 'return=representation',
   })
 
-  if (!data[0]) return text('笔记不存在', { status: 404 })
+  if (!data[0]) return text('记录不存在', { status: 404 })
   return json(data[0])
 }
 

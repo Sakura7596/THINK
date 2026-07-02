@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SupabaseRestError, supabaseRest } from './supabase'
+import { SupabaseRestError, notePayload, supabaseRest } from './supabase'
 
 describe('supabaseRest', () => {
   afterEach(() => {
@@ -81,5 +81,33 @@ describe('supabaseRest', () => {
       status: 500,
     })
     await expect(supabaseRest({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service-key' }, 'notes')).rejects.toBeInstanceOf(SupabaseRestError)
+  })
+})
+
+describe('notePayload', () => {
+  it('accepts diary metadata when the kind and date are valid', () => {
+    expect(notePayload({
+      title: '2026年7月2日',
+      content: '今天的日记',
+      tags: [' 日记 '],
+      kind: 'diary',
+      diary_date: '2026-07-02',
+    })).toEqual({
+      title: '2026年7月2日',
+      content: '今天的日记',
+      tags: ['日记'],
+      kind: 'diary',
+      diary_date: '2026-07-02',
+    })
+  })
+
+  it('ignores invalid kind and invalid diary dates', () => {
+    expect(notePayload({
+      title: '普通思考',
+      kind: 'private',
+      diary_date: '2026-99-99',
+    })).toEqual({
+      title: '普通思考',
+    })
   })
 })

@@ -1,4 +1,11 @@
-import type { Note, NoteInput } from '../types/note'
+import type { Note, NoteInput, NoteKind } from '../types/note'
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number, public readonly data: unknown = null) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -11,7 +18,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const message = await response.text().catch(() => '')
-    throw new Error(message || `Request failed: ${response.status}`)
+    let data: unknown = null
+    try {
+      data = message ? JSON.parse(message) : null
+    } catch {
+      data = null
+    }
+    throw new ApiError(message || `Request failed: ${response.status}`, response.status, data)
   }
 
   if (response.status === 204) {
@@ -23,12 +36,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type ListNotesOptions = {
   archived?: boolean
+  kind?: NoteKind | 'all'
   limit?: number
 }
 
 export function listNotes(options: ListNotesOptions = {}): Promise<Note[]> {
   const params = new URLSearchParams()
   if (typeof options.archived === 'boolean') params.set('archived', String(options.archived))
+  if (options.kind) params.set('kind', options.kind)
   if (options.limit) params.set('limit', String(options.limit))
   const suffix = params.toString() ? `?${params}` : ''
   return request<Note[]>(`/api/notes${suffix}`)

@@ -8,7 +8,7 @@ import type { Note } from '../types/note'
 function matchesSearch(note: Note, query: string) {
   const value = query.trim().toLocaleLowerCase()
   if (!value) return true
-  return [note.title, note.content, ...note.tags].some((part) => part.toLocaleLowerCase().includes(value))
+  return [note.title, note.content, note.diary_date ?? '', ...note.tags].some((part) => part.toLocaleLowerCase().includes(value))
 }
 
 export function ArchivePage() {
@@ -20,18 +20,19 @@ export function ArchivePage() {
   }, [])
 
   async function refresh() {
-    setNotes(await listNotes({ archived: true }))
+    setNotes(await listNotes({ archived: true, kind: 'all' }))
   }
 
   const visible = notes.filter((note) => matchesSearch(note, query))
 
   async function togglePin(note: Note) {
-    await updateNote(note.id, { is_pinned: !note.is_pinned })
+    if (note.kind === 'diary') return
+    await updateNote(note.id, { is_pinned: !note.is_pinned, kind: 'thought' })
     await refresh()
   }
 
   async function toggleArchive(note: Note) {
-    await updateNote(note.id, { is_archived: !note.is_archived })
+    await updateNote(note.id, { is_archived: !note.is_archived, kind: note.kind, diary_date: note.diary_date })
     await refresh()
   }
 
@@ -44,7 +45,7 @@ export function ArchivePage() {
     <section className="mx-auto max-w-3xl">
       <div className="mb-6">
         <h1 className="text-3xl font-semibold text-ink">归档</h1>
-        <p className="mt-2 text-muted">暂时放到一边的记录。</p>
+        <p className="mt-2 text-muted">暂时放到一边的思考和日记。</p>
       </div>
       <label className="relative mb-5 block">
         <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
@@ -57,7 +58,7 @@ export function ArchivePage() {
           ))}
         </div>
       ) : (
-        <EmptyState title="还没有归档记录。" />
+        <EmptyState title="还没有归档内容。" />
       )}
     </section>
   )

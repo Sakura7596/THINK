@@ -24,9 +24,15 @@ export function exportNotesAsMarkdown(notes: Note[], exportedAt = new Date()): s
   const sections = notes.map((note) => {
     const title = note.title.trim() || '未命名'
     const tags = note.tags.length ? note.tags.join(', ') : '-'
-    return [
+    const lines = [
       `## ${title}`,
       '',
+      `类型：${note.kind === 'diary' ? '日记' : '思考'}`,
+    ]
+
+    if (note.kind === 'diary' && note.diary_date) lines.push(`日记日期：${note.diary_date}`)
+
+    lines.push(
       `创建时间：${formatDateTime(note.created_at)}`,
       `更新时间：${formatDateTime(note.updated_at)}`,
       `标签：${tags}`,
@@ -34,7 +40,9 @@ export function exportNotesAsMarkdown(notes: Note[], exportedAt = new Date()): s
       note.content,
       '',
       '---',
-    ].join('\n')
+    )
+
+    return lines.join('\n')
   })
 
   return ['# think 导出', '', `导出时间：${formatDateTime(exportedAt)}`, '', '---', '', ...sections].join('\n')

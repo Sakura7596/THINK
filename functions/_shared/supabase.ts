@@ -7,11 +7,15 @@ export type WorkerEnv = Env & {
   ASSETS?: Fetcher
 }
 
+export type NoteKind = 'thought' | 'diary'
+
 export type DbNote = {
   id: string
   title: string
   content: string
   tags: string[]
+  kind: NoteKind
+  diary_date: string | null
   is_pinned: boolean
   is_archived: boolean
   is_deleted: boolean
@@ -62,6 +66,17 @@ export async function readJson(request: Request): Promise<Record<string, unknown
   }
 }
 
+export function isNoteKind(value: unknown): value is NoteKind {
+  return value === 'thought' || value === 'diary'
+}
+
+export function isIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00.000Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
 export function notePayload(input: Record<string, unknown>) {
   const payload: Record<string, unknown> = {}
 
@@ -70,6 +85,8 @@ export function notePayload(input: Record<string, unknown>) {
   if (Array.isArray(input.tags)) {
     payload.tags = input.tags.filter((tag): tag is string => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean)
   }
+  if (isNoteKind(input.kind)) payload.kind = input.kind
+  if (isIsoDate(input.diary_date)) payload.diary_date = input.diary_date
   if (typeof input.is_pinned === 'boolean') payload.is_pinned = input.is_pinned
   if (typeof input.is_archived === 'boolean') payload.is_archived = input.is_archived
 
